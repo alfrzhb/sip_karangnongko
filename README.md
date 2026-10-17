@@ -1,382 +1,134 @@
-# 🐐 SIP Karangnongko - Sistem Informasi Peternakan
+# SIP Karangnongko — Sistem Informasi Peternakan Kambing
 
-[![Laravel](https://img.shields.io/badge/Laravel-12.x-red.svg)](https://laravel.com)
-[![Filament](https://img.shields.io/badge/Filament-3.3-orange.svg)](https://filamentphp.com)
-[![PHP](https://img.shields.io/badge/PHP-8.2+-blue.svg)](https://php.net)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+Sistem administrasi peternakan kambing berbasis **Laravel 12** dan **Filament 3**, dikembangkan dalam konteks kegiatan **Kuliah Kerja Nyata (KKN)** di Desa Karangnongko, Klaten, Jawa Tengah.
 
-**SIP Karangnongko** adalah sistem informasi peternakan kambing berbasis web yang dirancang khusus untuk mengelola dan memantau aktivitas peternakan kambing di Desa Karangnongko. Sistem ini menyediakan solusi digital komprehensif untuk pencatatan data kambing, monitoring kesehatan harian, dan manajemen peternakan yang efisien.
+Proyek ini berfokus pada pencatatan data kambing per kandang, absensi/pengecekan harian, dan tampilan laporan operasional untuk pengelola peternakan.
 
-## 🎯 Tujuan Proyek
+> **Status: proyek KKN / aplikasi administrasi tahap pengembangan.** Repository memiliki model, migrasi, panel Filament, halaman dashboard, serta laporan; namun keamanan akun, cakupan otorisasi, pengujian, dan kesiapan deployment produksi **belum dapat dinyatakan tervalidasi**. Jangan gunakan data atau akun asli sebelum isu pada bagian [Keamanan dan keterbatasan](#keamanan-dan-keterbatasan) ditangani.
 
-Sistem ini dikembangkan untuk:
-- Digitalisasi pengelolaan data peternakan kambing
-- Memudahkan pencatatan dan monitoring kesehatan kambing harian
-- Meningkatkan efisiensi manajemen peternakan
-- Menyediakan laporan dan analisis data peternakan
-- Mendukung pengambilan keputusan berbasis data
+## Ringkasan implementasi
 
-## Daftar Isi
-- [Tentang Proyek](#tentang-proyek)
-- [Fitur Utama](#fitur-utama)
-- [Teknologi yang Digunakan](#teknologi-yang-digunakan)
-- [Prasyarat](#prasyarat)
-- [Instalasi](#instalasi)
-- [Cara Penggunaan](#cara-penggunaan)
-- [Berkontribusi](#berkontribusi)
-- [Lisensi](#lisensi)
-- [Kontak](#kontak)
+| Modul | Implementasi dalam kode | Batasan |
+| --- | --- | --- |
+| Data peternakan | Model `Farm` dengan nama dan lokasi; seeder menyiapkan kandang Barat dan Timur | Belum ditemukan antarmuka CRUD khusus `FarmResource` |
+| Data kambing | `GoatResource`: daftar, pencarian, filter, tambah, ubah, dan hapus; tag dibuat oleh model | Generator nomor tag perlu pengujian konkurensi; filter role tidak menggantikan policy otorisasi |
+| Pengecekan harian | `DailyCheckResource`: tanggal, pengguna yang mengecek, catatan, dan operasi CRUD | Tidak merekam diagnosis kesehatan per kambing; relasi banyak-ke-banyak kambing pada model masih dikomentari |
+| Dashboard | Jumlah kambing, status pengecekan hari ini, ringkasan 7 hari, dan kambing terbaru | Nilai laporan sakit bergantung pada kolom opsional; tidak membuktikan pemantauan kesehatan real-time |
+| Laporan global | Halaman `LaporanGlobalPage` dengan widget tabel kambing dan absensi | Bukan bukti sistem analitik atau ekspor laporan menyeluruh |
+| Pengguna | Model `User` menyimpan role dan relasi kandang; panel login Filament di `/admin` | Akses panel belum dibatasi berdasarkan role |
 
-## 📖 Tentang Proyek
+### Alur data
 
-SIP Karangnongko dikembangkan sebagai bagian dari program KKN (Kuliah Kerja Nyata) untuk membantu digitalisasi sektor peternakan di Desa Karangnongko. Sistem ini mengatasi permasalahan pencatatan manual yang rentan terhadap kehilangan data dan kesulitan dalam monitoring kondisi kambing secara real-time.
+~~~text
+Peternakan (Farm)
+  ├── Pengguna (User: admin / barat / timur)
+  └── Kambing (Goat: tag, jenis, kelamin, tanggal lahir, berat)
+Pengguna
+  └── Catatan pengecekan (DailyCheck: tanggal, catatan)
+            ↓
+      Dashboard dan laporan Filament
+~~~
 
-### Latar Belakang
-- Pencatatan data kambing masih dilakukan secara manual
-- Kesulitan dalam tracking kesehatan dan kondisi kambing harian
-- Tidak ada sistem terpusat untuk mengelola multiple peternakan
-- Kurangnya data historis untuk analisis dan pengambilan keputusan
+Pengguna non-admin difilter berdasarkan kandang pada kueri daftar kambing, dan berdasarkan pembuat catatan pada daftar pengecekan harian. Ini merupakan bagian dari implementasi filter data, **bukan jaminan kontrol akses menyeluruh** untuk semua aksi.
 
-### Target Pengguna
-- **Peternak**: Mengelola data kambing dan pencatatan harian
-- **Administrator**: Mengawasi seluruh peternakan dan generate laporan
-- **Petugas Lapangan**: Melakukan monitoring dan input data harian
+## Teknologi
 
-## ✨ Fitur Utama
+| Lapisan | Teknologi |
+| --- | --- |
+| Framework | PHP 8.2+, Laravel 12 |
+| Admin UI | Filament 3.3, Blade/Livewire melalui Filament |
+| Database | Laravel Eloquent, migrations; `.env.example` memakai SQLite sebagai default |
+| Frontend assets | Vite 6, Tailwind CSS 4 |
+| Quality tools | Pest 3, Laravel Pint |
 
-### 🏢 **Manajemen Peternakan**
-- Registrasi dan pengelolaan data peternakan
-- Multi-farm support untuk mengelola beberapa lokasi
-- Sistem pembatasan akses berdasarkan peternakan
+## Menjalankan secara lokal
 
-### 🐐 **Manajemen Data Kambing**
-- **Auto Tag Number**: Sistem penomoran otomatis untuk identifikasi unik
-- **Data Lengkap**: Jenis kelamin, tipe/ras, tanggal lahir
-- **CRUD Operations**: Create, Read, Update, Delete data kambing
-- **Filter & Search**: Pencarian berdasarkan berbagai kriteria
-- **Relasi Data**: Hubungan kambing dengan peternakan dan user
+### Prasyarat
 
-### 📅 **Sistem Absen Harian (Daily Check)**
-- **Pencatatan Harian**: Input kehadiran dan kondisi kambing
-- **Many-to-Many Relation**: Satu pengecekan untuk multiple kambing
-- **Validasi Tanggal**: Pembatasan input untuk tanggal masa depan
-- **Catatan Observasi**: Field khusus untuk kondisi dan catatan
-- **Auto User Assignment**: Otomatis assign user yang melakukan check
+- PHP **8.2+** dengan ekstensi yang dibutuhkan Laravel
+- Composer
+- Node.js dan npm
+- SQLite (default) atau database lain yang dikonfigurasi sendiri
 
-### 👥 **Sistem User & Role Management**
-- **Role-based Access Control**: Admin dan User dengan hak akses berbeda
-- **Multi-level Authorization**: Pembatasan akses berdasarkan peternakan
-- **User Activity Tracking**: Pencatatan aktivitas pengguna
+~~~bash
+git clone https://github.com/alfrzhb/sip_karangnongko.git
+cd sip_karangnongko
 
-### 📊 **Dashboard & Reporting**
-- **Real-time Dashboard**: Overview data peternakan terkini
-- **Widget System**: Komponen visual untuk data penting
-- **Laporan Global**: Analisis komprehensif lintas peternakan
-- **Historical Data**: Data historis untuk analisis trend
+composer install
+npm install
 
-### 🔧 **Fitur Teknis**
-- **Filament Admin Panel**: Interface modern dan user-friendly
-- **Database Optimization**: Index untuk performa optimal
-- **Responsive Design**: Akses dari berbagai perangkat
-- **Data Validation**: Validasi input untuk integritas data
+cp .env.example .env
+php artisan key:generate
 
-## 🛠️ Teknologi yang Digunakan
+# Untuk DB_CONNECTION=sqlite, siapkan file database bila belum ada.
+# macOS/Linux:
+mkdir -p database
+touch database/database.sqlite
 
-### Backend
-- **Framework**: Laravel 12.x
-- **Language**: PHP 8.2+
-- **Admin Panel**: Filament 3.3
-- **Database**: MySQL 8.0+ / PostgreSQL 14+
-- **Package Manager**: Composer
+php artisan migrate
+npm run build
+php artisan serve
+~~~
 
-### Frontend
-- **UI Framework**: Filament Components (Tailwind CSS)
-- **Build Tool**: Vite
-- **Package Manager**: NPM
-- **Icons**: Heroicons
+Untuk pengembangan antarmuka dengan hot reload, jalankan `npm run dev` pada terminal terpisah. Di Windows, salin `.env.example` ke `.env` dan buat file `database/database.sqlite` secara manual atau melalui PowerShell. Pengaturan koneksi bisa disesuaikan di `.env`.
 
-### Development Tools
-- **Testing**: Pest PHP
-- **Code Style**: Laravel Pint
-- **Development Server**: Laravel Sail / Artisan Serve
-- **Version Control**: Git
+Setelah pengaturan dan migrasi berhasil, panel autentikasi Filament dikonfigurasi pada:
 
-### Database Features
-- **Migrations**: Database schema versioning
-- **Seeders**: Sample data generation
-- **Relationships**: Eloquent ORM relationships
-- **Performance**: Optimized indexes
+- `http://127.0.0.1:8000/admin` — login panel administrasi
+- `http://127.0.0.1:8000/` — halaman welcome Laravel; **bukan** halaman dashboard peternakan
 
-## 📋 Prasyarat
+### Data contoh (hanya untuk lingkungan lokal)
 
-Pastikan sistem Anda memiliki:
+Seeder `database/seeders/UserSeeder.php` menyiapkan kandang Barat dan Timur serta akun demonstrasi. **Perhatian:** kode seeder memuat password bawaan yang mudah ditebak. Jalankan `php artisan db:seed` hanya dalam lingkungan pengembangan terisolasi; jangan gunakan akun, email contoh, atau password tersebut untuk layanan yang dapat diakses publik.
 
-### Wajib
-- **PHP** >= 8.2 dengan ekstensi:
-  - BCMath
-  - Ctype
-  - Fileinfo
-  - JSON
-  - Mbstring
-  - OpenSSL
-  - PDO
-  - Tokenizer
-  - XML
-- **Composer** >= 2.0
-- **Database**: MySQL >= 8.0 atau PostgreSQL >= 14
-- **Web Server**: Apache/Nginx atau PHP built-in server
+### Perintah verifikasi
 
-### Opsional (untuk development)
-- **Node.js** >= 18.x
-- **NPM** >= 9.x
-- **Git** untuk version control
-- **Laravel Sail** untuk Docker development
-
-## 🚀 Instalasi
-
-### Metode 1: Instalasi Manual
-
-1. **Clone Repository**
-   ```bash
-   git clone https://github.com/V60Code/sip_karangnongko.git
-   cd sip_karangnongko
-   ```
-
-2. **Install Dependencies**
-   ```bash
-   composer install
-   npm install
-   ```
-
-3. **Environment Setup**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-4. **Database Configuration**
-   
-   Edit file `.env`:
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=sip_karangnongko
-   DB_USERNAME=your_username
-   DB_PASSWORD=your_password
-   ```
-
-5. **Database Migration & Seeding**
-   ```bash
-   php artisan migrate --seed
-   ```
-
-6. **Build Assets**
-   ```bash
-   npm run build
-   ```
-
-7. **Storage Link**
-   ```bash
-   php artisan storage:link
-   ```
-
-8. **Start Development Server**
-   ```bash
-   php artisan serve
-   ```
-
-### Metode 2: Menggunakan Laravel Sail (Docker)
-
-1. **Clone & Setup**
-   ```bash
-   git clone https://github.com/V60Code/sip_karangnongko.git
-   cd sip_karangnongko
-   cp .env.example .env
-   ```
-
-2. **Install Dependencies via Sail**
-   ```bash
-   ./vendor/bin/sail up -d
-   ./vendor/bin/sail composer install
-   ./vendor/bin/sail npm install
-   ```
-
-3. **Setup Application**
-   ```bash
-   ./vendor/bin/sail artisan key:generate
-   ./vendor/bin/sail artisan migrate --seed
-   ./vendor/bin/sail npm run build
-   ```
-
-Aplikasi akan tersedia di `http://localhost` (Sail) atau `http://127.0.0.1:8000` (Artisan Serve)
-
-## 📱 Cara Penggunaan
-
-### Login Sistem
-
-1. **Akses Aplikasi**
-   - Buka browser dan kunjungi `http://127.0.0.1:8000/admin`
-   - Atau `http://localhost/admin` jika menggunakan Sail
-
-2. **Kredensial Default**
-   
-   Setelah menjalankan seeder, gunakan akun berikut:
-   
-   **Administrator:**
-   - Email: `admin@karangnongko.com`
-   - Password: `password`
-   
-   **User Peternakan:**
-   - Email: `user@karangnongko.com`
-   - Password: `password`
-
-### Panduan Penggunaan
-
-#### Untuk Administrator:
-1. **Dashboard**: Lihat overview seluruh peternakan
-2. **Manajemen Peternakan**: Tambah/edit data peternakan
-3. **Manajemen User**: Kelola akses pengguna
-4. **Laporan Global**: Generate laporan komprehensif
-
-#### Untuk User Peternakan:
-1. **Data Kambing**: Kelola data kambing di peternakan Anda
-2. **Daily Check**: Input kondisi kambing harian
-3. **Laporan**: Lihat laporan peternakan Anda
-
-### Fitur Utama
-
-- **Auto Tag Number**: Sistem otomatis generate nomor tag kambing
-- **Daily Monitoring**: Pencatatan kondisi kambing setiap hari
-- **Multi-Farm**: Kelola beberapa peternakan dalam satu sistem
-- **Role-based Access**: Akses terbatas sesuai role pengguna
-
-## 🤝 Berkontribusi
-
-Kami menyambut kontribusi untuk pengembangan SIP Karangnongko!
-
-### Cara Berkontribusi
-
-1. **Fork Repository**
-   ```bash
-   git clone https://github.com/your-username/sip_karangnongko.git
-   ```
-
-2. **Buat Feature Branch**
-   ```bash
-   git checkout -b feature/nama-fitur
-   ```
-
-3. **Development Setup**
-   ```bash
-   composer install
-   npm install
-   cp .env.example .env
-   php artisan key:generate
-   php artisan migrate --seed
-   ```
-
-4. **Coding Standards**
-   - Ikuti PSR-12 coding standards
-   - Gunakan Laravel Pint untuk formatting:
-     ```bash
-     ./vendor/bin/pint
-     ```
-   - Tulis tests untuk fitur baru:
-     ```bash
-     php artisan test
-     ```
-
-5. **Commit & Push**
-   ```bash
-   git add .
-   git commit -m "feat: menambahkan fitur X"
-   git push origin feature/nama-fitur
-   ```
-
-6. **Create Pull Request**
-   - Buat PR ke branch `main`
-   - Sertakan deskripsi lengkap perubahan
-   - Pastikan semua tests passing
-
-### Guidelines
-- Gunakan conventional commits
-- Update dokumentasi jika diperlukan
-- Pastikan backward compatibility
-- Test pada multiple PHP versions
-
-## 🧪 Testing
-
-### Menjalankan Tests
-
-```bash
-# Run all tests
+~~~bash
 php artisan test
+npm run build
+~~~
 
-# Run specific test suite
-php artisan test --testsuite=Feature
-php artisan test --testsuite=Unit
+Perintah di atas tersedia dalam proyek, tetapi keberhasilan eksekusi dan cakupan pengujian fungsional **tidak diklaim** oleh README ini.
 
-# Run with coverage
-php artisan test --coverage
-```
+## Struktur direktori penting
 
-### Test Database
+~~~text
+app/
+  Filament/
+    Pages/                 # Dashboard dan laporan global
+    Resources/             # CRUD kambing dan catatan harian
+  Models/                  # Farm, Goat, DailyCheck, User
+  Providers/Filament/      # Konfigurasi panel /admin
+database/
+  migrations/              # Skema dan perubahan skema
+  seeders/                 # Data farm dan akun demo
+resources/                 # Blade views / aset UI
+routes/web.php             # Route halaman welcome
+tests/                     # Pengujian dasar
+~~~
 
-Sistem menggunakan SQLite in-memory untuk testing:
+## Keamanan dan keterbatasan
 
-```bash
-# Setup test environment
-cp .env.testing.example .env.testing
-php artisan config:clear
-```
+1. **Kredensial demo:** seeder menyimpan password statis. Hapus atau ganti mekanisme ini sebelum deployment dan rotasi kredensial untuk lingkungan yang pernah memakai akun contoh.
+2. **Otorisasi panel:** `User::canAccessPanel()` saat ini mengembalikan `true` untuk semua pengguna yang diautentikasi. Pembatasan pada kueri/form belum setara dengan policy per-record atau pemeriksaan izin setiap aksi.
+3. **Pengecekan harian bukan rekam medis ternak:** catatan masih berorientasi tanggal, pencatat, dan keterangan umum. Jangan menyebutnya pelacakan penyakit setiap kambing secara lengkap.
+4. **Penomoran tag:** model membuat nomor urut berdasarkan record sebelumnya; kemungkinan tabrakan pada operasi serentak perlu diuji dan ditangani.
+5. **Kualitas produksi:** belum ada bukti pengujian end-to-end, peninjauan keamanan, backup/restore, maupun verifikasi deployment produksi dalam audit README ini.
 
-## 🚀 Deployment
+## Konteks proyek terkait
 
-### Production Setup
+SIP Karangnongko adalah implementasi **backend/admin** berbasis Laravel/Filament. Prototype frontend dan landing page yang memiliki nama serupa disimpan secara terpisah:
 
-1. **Server Requirements**
-   - PHP 8.2+ dengan semua ekstensi
-   - MySQL 8.0+ atau PostgreSQL 14+
-   - Nginx atau Apache
-   - SSL Certificate (recommended)
+- [karangnongko-goat-keeper](https://github.com/alfrzhb/karangnongko-goat-keeper) — frontend manajemen berbasis React; backend tidak termasuk di repo tersebut
+- [karangnongko-farm](https://github.com/alfrzhb/karangnongko-farm) — landing page statis
+- [LP-Karangnongko](https://github.com/alfrzhb/LP-Karangnongko) — eksplorasi landing page lain
 
-2. **Environment Configuration**
-   ```env
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://your-domain.com
-   
-   DB_CONNECTION=mysql
-   DB_HOST=your-db-host
-   DB_DATABASE=sip_karangnongko
-   DB_USERNAME=your-db-user
-   DB_PASSWORD=your-secure-password
-   ```
+Repository-repository tersebut **tidak otomatis terintegrasi** satu sama lain.
 
-3. **Deployment Commands**
-   ```bash
-   composer install --optimize-autoloader --no-dev
-   npm run build
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   php artisan migrate --force
-   ```
+## Lisensi
 
-## 📄 Lisensi
+Berkas [LICENSE](LICENSE) tersedia dalam repository.
 
-Proyek ini dilisensikan di bawah [MIT License](LICENSE). Lihat file LICENSE untuk detail lengkap.
+---
 
-## 👥 Tim Pengembang
-
-**Tim KKN Karangnongko**
-- Email: [m.alfarizihabibullah@gmail.com](mailto:m.alfarizihabibullah@gmail.com)
-- Repository: [https://github.com/V60Code/sip_karangnongko](https://github.com/V60Code/sip_karangnongko)
-
-## 🙏 Acknowledgments
-
-- [Laravel Framework](https://laravel.com) - Web application framework
-- [Filament](https://filamentphp.com) - Admin panel framework
-- [Tailwind CSS](https://tailwindcss.com) - CSS framework
-- Desa Karangnongko - Lokasi implementasi sistem
+Dikembangkan sebagai proyek pembelajaran dan digitalisasi peternakan dalam kegiatan KKN.
